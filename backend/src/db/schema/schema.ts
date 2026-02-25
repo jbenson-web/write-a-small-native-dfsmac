@@ -1,5 +1,14 @@
 import { pgTable, uuid, text, timestamp, boolean, integer } from 'drizzle-orm/pg-core';
 
+export const devices = pgTable('devices', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  name: text('name'),
+  platform: text('platform'),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const deviceRules = pgTable('device_rules', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: text('user_id').notNull(),

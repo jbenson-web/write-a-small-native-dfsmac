@@ -5,6 +5,7 @@ describe("API Integration Tests", () => {
   // Shared state for chaining tests (e.g., created resource IDs, auth tokens)
   let authToken: string;
   let testDeviceId: string;
+  let registeredDeviceId: string;
   let reportId: string;
 
   // Setup: Sign up test user for authenticated endpoints
@@ -241,6 +242,220 @@ describe("API Integration Tests", () => {
 
     test("Get reports without authentication (401)", async () => {
       const res = await api(`/device-agent/reports?deviceId=test-device`);
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+  });
+
+  describe("Devices - CRUD Flow", () => {
+    test("Register a device (201 or 200)", async () => {
+      const res = await authenticatedApi(
+        "/api/devices/register",
+        authToken,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deviceId: testDeviceId,
+            name: "Test Device",
+            platform: "android",
+          }),
+        }
+      );
+      await expectStatus(res, 200, 201);
+      const data = await res.json();
+      expect(data.id).toBeDefined();
+      expect(data.userId).toBeDefined();
+      expect(data.name).toBe("Test Device");
+      expect(data.platform).toBe("android");
+      registeredDeviceId = data.id;
+    });
+
+    test("Register device without deviceId (missing required field)", async () => {
+      const res = await authenticatedApi(
+        "/api/devices/register",
+        authToken,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: "Test Device",
+            platform: "ios",
+          }),
+        }
+      );
+      await expectStatus(res, 400);
+    });
+
+    test("Register device with invalid platform", async () => {
+      const res = await authenticatedApi(
+        "/api/devices/register",
+        authToken,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deviceId: "invalid-platform-device",
+            name: "Test Device",
+            platform: "windows",
+          }),
+        }
+      );
+      await expectStatus(res, 400);
+    });
+
+    test("Get all devices (200)", async () => {
+      const res = await authenticatedApi(
+        "/api/devices",
+        authToken
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(Array.isArray(data)).toBe(true);
+      expect(data.length).toBeGreaterThan(0);
+    });
+
+    test("Update device (200)", async () => {
+      const res = await authenticatedApi(
+        `/api/devices/${registeredDeviceId}`,
+        authToken,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: "Updated Device Name",
+          }),
+        }
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(data.id).toBe(registeredDeviceId);
+      expect(data.name).toBe("Updated Device Name");
+    });
+
+    test("Update non-existent device (404)", async () => {
+      const res = await authenticatedApi(
+        "/api/devices/00000000-0000-0000-0000-000000000000",
+        authToken,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: "Updated Name",
+          }),
+        }
+      );
+      await expectStatus(res, 403, 404);
+    });
+
+    test("Get device stats (200)", async () => {
+      const res = await authenticatedApi(
+        `/api/devices/${registeredDeviceId}/stats`,
+        authToken
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(data.deviceId).toBeDefined();
+      expect(typeof data.totalReports).toBe("number");
+      expect(typeof data.totalUsageMinutes).toBe("number");
+      expect(typeof data.activeRules).toBe("number");
+    });
+
+    test("Get stats for non-existent device (404)", async () => {
+      const res = await authenticatedApi(
+        "/api/devices/00000000-0000-0000-0000-000000000000/stats",
+        authToken
+      );
+      await expectStatus(res, 403, 404);
+    });
+
+    test("Delete device (200)", async () => {
+      const res = await authenticatedApi(
+        `/api/devices/${registeredDeviceId}`,
+        authToken,
+        {
+          method: "DELETE",
+        }
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+    });
+
+    test("Delete non-existent device (404)", async () => {
+      const res = await authenticatedApi(
+        "/api/devices/00000000-0000-0000-0000-000000000000",
+        authToken,
+        {
+          method: "DELETE",
+        }
+      );
+      await expectStatus(res, 403, 404);
+    });
+
+    test("Get deleted device (404)", async () => {
+      const res = await authenticatedApi(
+        `/api/devices/${registeredDeviceId}/stats`,
+        authToken
+      );
+      await expectStatus(res, 403, 404);
+    });
+  });
+
+  describe("Devices - Authentication", () => {
+    test("Register device without authentication (401)", async () => {
+      const res = await api("/api/devices/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deviceId: "test-device",
+          name: "Test Device",
+          platform: "ios",
+        }),
+      });
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+
+    test("Get devices without authentication (401)", async () => {
+      const res = await api("/api/devices");
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+
+    test("Update device without authentication (401)", async () => {
+      const res = await api(
+        "/api/devices/some-device-id",
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: "Updated Name",
+          }),
+        }
+      );
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+
+    test("Delete device without authentication (401)", async () => {
+      const res = await api(
+        "/api/devices/some-device-id",
+        {
+          method: "DELETE",
+        }
+      );
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+
+    test("Get device stats without authentication (401)", async () => {
+      const res = await api("/api/devices/some-device-id/stats");
       await expectStatus(res, 401);
       const data = await res.json();
       expect(data.error).toBeDefined();
