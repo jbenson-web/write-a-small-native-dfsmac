@@ -12,6 +12,12 @@ export default function TabLayout() {
       label: 'Monitor',
     },
     {
+      name: 'rules',
+      route: '/(tabs)/rules',
+      icon: 'settings',
+      label: 'Rules',
+    },
+    {
       name: 'devices',
       route: '/(tabs)/devices',
       icon: 'devices',
@@ -34,6 +40,7 @@ export default function TabLayout() {
         }}
       >
         <Stack.Screen key="home" name="(home)" />
+        <Stack.Screen key="rules" name="rules" />
         <Stack.Screen key="devices" name="devices" />
         <Stack.Screen key="profile" name="profile" />
       </Stack>
