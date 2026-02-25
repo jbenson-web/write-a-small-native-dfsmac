@@ -24,6 +24,12 @@ export default function TabLayout() {
       label: 'Devices',
     },
     {
+      name: 'gamification',
+      route: '/(tabs)/gamification',
+      icon: 'emoji-events',
+      label: 'Progress',
+    },
+    {
       name: 'profile',
       route: '/(tabs)/profile',
       icon: 'person',
@@ -42,6 +48,7 @@ export default function TabLayout() {
         <Stack.Screen key="home" name="(home)" />
         <Stack.Screen key="rules" name="rules" />
         <Stack.Screen key="devices" name="devices" />
+        <Stack.Screen key="gamification" name="gamification" />
         <Stack.Screen key="profile" name="profile" />
       </Stack>
       <FloatingTabBar tabs={tabs} />
