@@ -4,6 +4,7 @@ import * as authSchema from './db/schema/auth-schema.js';
 import { registerDeviceAgentRoutes } from './routes/device-agent.js';
 import { registerDevicesRoutes } from './routes/devices.js';
 import { registerRulesRoutes } from './routes/rules.js';
+import { registerGamificationRoutes } from './routes/gamification.js';
 
 const schema = { ...appSchema, ...authSchema };
 
@@ -21,6 +22,7 @@ app.withAuth();
 registerDeviceAgentRoutes(app);
 registerDevicesRoutes(app);
 registerRulesRoutes(app);
+registerGamificationRoutes(app);
 
 await app.run();
 app.logger.info('Application running');

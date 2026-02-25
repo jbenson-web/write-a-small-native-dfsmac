@@ -15,6 +15,13 @@
       "when": 1772052066770,
       "tag": "20260225204106_stiff_kate_bishop",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772053551877,
+      "tag": "20260225210551_steady_smiling_tiger",
+      "breakpoints": true
     }
   ]
 }

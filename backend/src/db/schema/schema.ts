@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, boolean, integer } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean, integer, jsonb } from 'drizzle-orm/pg-core';
 
 export const devices = pgTable('devices', {
   id: text('id').primaryKey(),
@@ -28,4 +28,33 @@ export const deviceReports = pgTable('device_reports', {
   usageMinutes: integer('usage_minutes').notNull(),
   reportedAt: timestamp('reported_at', { withTimezone: true }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const achievements = pgTable('achievements', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull(),
+  achievementType: text('achievement_type').notNull(),
+  unlockedAt: timestamp('unlocked_at', { withTimezone: true }).notNull(),
+  metadata: jsonb('metadata'),
+});
+
+export const userStats = pgTable('user_stats', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull().unique(),
+  currentStreak: integer('current_streak').default(0).notNull(),
+  longestStreak: integer('longest_streak').default(0).notNull(),
+  totalPoints: integer('total_points').default(0).notNull(),
+  perfectDays: integer('perfect_days').default(0).notNull(),
+  lastCheckIn: timestamp('last_check_in', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const rewards = pgTable('rewards', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull(),
+  rewardType: text('reward_type').notNull(),
+  rewardName: text('reward_name').notNull(),
+  rewardDescription: text('reward_description'),
+  earnedAt: timestamp('earned_at', { withTimezone: true }).notNull(),
 });

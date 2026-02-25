@@ -768,4 +768,131 @@ describe("API Integration Tests", () => {
       expect(data.error).toBeDefined();
     });
   });
+
+  describe("Gamification - Stats", () => {
+    test("Get gamification stats (200)", async () => {
+      const res = await authenticatedApi(
+        "/api/gamification/stats",
+        authToken
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(typeof data.currentStreak).toBe("number");
+      expect(typeof data.longestStreak).toBe("number");
+      expect(typeof data.totalPoints).toBe("number");
+      expect(typeof data.perfectDays).toBe("number");
+    });
+
+    test("Get gamification stats without authentication (401)", async () => {
+      const res = await api("/api/gamification/stats");
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+  });
+
+  describe("Gamification - Achievements", () => {
+    test("Get achievements (200)", async () => {
+      const res = await authenticatedApi(
+        "/api/gamification/achievements",
+        authToken
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    test("Get achievements without authentication (401)", async () => {
+      const res = await api("/api/gamification/achievements");
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+  });
+
+  describe("Gamification - Rewards", () => {
+    test("Get rewards (200)", async () => {
+      const res = await authenticatedApi(
+        "/api/gamification/rewards",
+        authToken
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    test("Get rewards without authentication (401)", async () => {
+      const res = await api("/api/gamification/rewards");
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+  });
+
+  describe("Gamification - Check-in", () => {
+    test("Check in with device (200)", async () => {
+      const res = await authenticatedApi(
+        "/api/gamification/check-in",
+        authToken,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deviceId: testDeviceId,
+          }),
+        }
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(typeof data.pointsEarned).toBe("number");
+      expect(Array.isArray(data.newAchievements)).toBe(true);
+      expect(typeof data.currentStreak).toBe("number");
+    });
+
+    test("Check in without deviceId (missing required field)", async () => {
+      const res = await authenticatedApi(
+        "/api/gamification/check-in",
+        authToken,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        }
+      );
+      await expectStatus(res, 400);
+    });
+
+    test("Check in without authentication (401)", async () => {
+      const res = await api("/api/gamification/check-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deviceId: "test-device",
+        }),
+      });
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+  });
+
+  describe("Gamification - Leaderboard", () => {
+    test("Get leaderboard (200)", async () => {
+      const res = await authenticatedApi(
+        "/api/gamification/leaderboard",
+        authToken
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    test("Get leaderboard without authentication (401)", async () => {
+      const res = await api("/api/gamification/leaderboard");
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+  });
 });
