@@ -7,6 +7,7 @@ describe("API Integration Tests", () => {
   let testDeviceId: string;
   let registeredDeviceId: string;
   let reportId: string;
+  let ruleId: string;
 
   // Setup: Sign up test user for authenticated endpoints
   test("Sign up test user", async () => {
@@ -456,6 +457,312 @@ describe("API Integration Tests", () => {
 
     test("Get device stats without authentication (401)", async () => {
       const res = await api("/api/devices/some-device-id/stats");
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+  });
+
+  describe("Rules - CRUD Flow", () => {
+    test("Create a rule (200)", async () => {
+      const res = await authenticatedApi(
+        "/api/rules",
+        authToken,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deviceId: testDeviceId,
+            ruleType: "screen_lock",
+            isActive: true,
+          }),
+        }
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(data.id).toBeDefined();
+      expect(data.deviceId).toBe(testDeviceId);
+      expect(data.ruleType).toBe("screen_lock");
+      expect(data.isActive).toBe(true);
+      ruleId = data.id;
+    });
+
+    test("Create rule without deviceId (missing required field)", async () => {
+      const res = await authenticatedApi(
+        "/api/rules",
+        authToken,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ruleType: "app_block",
+            isActive: true,
+          }),
+        }
+      );
+      await expectStatus(res, 400);
+    });
+
+    test("Create rule without ruleType (missing required field)", async () => {
+      const res = await authenticatedApi(
+        "/api/rules",
+        authToken,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deviceId: testDeviceId,
+            isActive: true,
+          }),
+        }
+      );
+      await expectStatus(res, 400);
+    });
+
+    test("Create rule without isActive (missing required field)", async () => {
+      const res = await authenticatedApi(
+        "/api/rules",
+        authToken,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deviceId: testDeviceId,
+            ruleType: "time_limit",
+          }),
+        }
+      );
+      await expectStatus(res, 400);
+    });
+
+    test("Create rule with invalid ruleType", async () => {
+      const res = await authenticatedApi(
+        "/api/rules",
+        authToken,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deviceId: testDeviceId,
+            ruleType: "invalid_rule",
+            isActive: true,
+          }),
+        }
+      );
+      await expectStatus(res, 400);
+    });
+
+    test("Create app_block rule with targetApp", async () => {
+      const res = await authenticatedApi(
+        "/api/rules",
+        authToken,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deviceId: testDeviceId,
+            ruleType: "app_block",
+            targetApp: "com.example.app",
+            isActive: true,
+          }),
+        }
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(data.ruleType).toBe("app_block");
+      expect(data.targetApp).toBe("com.example.app");
+    });
+
+    test("Create time_limit rule with timeLimit", async () => {
+      const res = await authenticatedApi(
+        "/api/rules",
+        authToken,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deviceId: testDeviceId,
+            ruleType: "time_limit",
+            timeLimit: 60,
+            isActive: true,
+          }),
+        }
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(data.ruleType).toBe("time_limit");
+      expect(data.timeLimit).toBe(60);
+    });
+
+    test("Get all rules (200)", async () => {
+      const res = await authenticatedApi(
+        "/api/rules",
+        authToken
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    test("Get a single rule by ID (200)", async () => {
+      const res = await authenticatedApi(
+        `/api/rules/${ruleId}`,
+        authToken
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(data.id).toBe(ruleId);
+      expect(data.deviceId).toBe(testDeviceId);
+    });
+
+    test("Get non-existent rule (404)", async () => {
+      const res = await authenticatedApi(
+        "/api/rules/00000000-0000-0000-0000-000000000000",
+        authToken
+      );
+      await expectStatus(res, 403, 404);
+    });
+
+    test("Update rule (200)", async () => {
+      const res = await authenticatedApi(
+        `/api/rules/${ruleId}`,
+        authToken,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            isActive: false,
+          }),
+        }
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(data.id).toBe(ruleId);
+      expect(data.isActive).toBe(false);
+    });
+
+    test("Update rule with new ruleType", async () => {
+      const res = await authenticatedApi(
+        `/api/rules/${ruleId}`,
+        authToken,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ruleType: "app_block",
+            targetApp: "com.test.app",
+            isActive: true,
+          }),
+        }
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(data.ruleType).toBe("app_block");
+      expect(data.targetApp).toBe("com.test.app");
+      expect(data.isActive).toBe(true);
+    });
+
+    test("Update non-existent rule (404)", async () => {
+      const res = await authenticatedApi(
+        "/api/rules/00000000-0000-0000-0000-000000000000",
+        authToken,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            isActive: false,
+          }),
+        }
+      );
+      await expectStatus(res, 403, 404);
+    });
+
+    test("Delete rule (200)", async () => {
+      const res = await authenticatedApi(
+        `/api/rules/${ruleId}`,
+        authToken,
+        {
+          method: "DELETE",
+        }
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+    });
+
+    test("Delete non-existent rule (404)", async () => {
+      const res = await authenticatedApi(
+        "/api/rules/00000000-0000-0000-0000-000000000000",
+        authToken,
+        {
+          method: "DELETE",
+        }
+      );
+      await expectStatus(res, 403, 404);
+    });
+
+    test("Get deleted rule (404)", async () => {
+      const res = await authenticatedApi(
+        `/api/rules/${ruleId}`,
+        authToken
+      );
+      await expectStatus(res, 403, 404);
+    });
+  });
+
+  describe("Rules - Authentication", () => {
+    test("Create rule without authentication (401)", async () => {
+      const res = await api("/api/rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deviceId: "test-device",
+          ruleType: "screen_lock",
+          isActive: true,
+        }),
+      });
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+
+    test("Get all rules without authentication (401)", async () => {
+      const res = await api("/api/rules");
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+
+    test("Get single rule without authentication (401)", async () => {
+      const res = await api("/api/rules/00000000-0000-0000-0000-000000000000");
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+
+    test("Update rule without authentication (401)", async () => {
+      const res = await api(
+        "/api/rules/00000000-0000-0000-0000-000000000000",
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            isActive: false,
+          }),
+        }
+      );
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+
+    test("Delete rule without authentication (401)", async () => {
+      const res = await api(
+        "/api/rules/00000000-0000-0000-0000-000000000000",
+        {
+          method: "DELETE",
+        }
+      );
       await expectStatus(res, 401);
       const data = await res.json();
       expect(data.error).toBeDefined();

@@ -3,6 +3,7 @@ import * as appSchema from './db/schema/schema.js';
 import * as authSchema from './db/schema/auth-schema.js';
 import { registerDeviceAgentRoutes } from './routes/device-agent.js';
 import { registerDevicesRoutes } from './routes/devices.js';
+import { registerRulesRoutes } from './routes/rules.js';
 
 const schema = { ...appSchema, ...authSchema };
 
@@ -19,6 +20,7 @@ app.withAuth();
 // IMPORTANT: Always use registration functions to avoid circular dependency issues
 registerDeviceAgentRoutes(app);
 registerDevicesRoutes(app);
+registerRulesRoutes(app);
 
 await app.run();
 app.logger.info('Application running');
