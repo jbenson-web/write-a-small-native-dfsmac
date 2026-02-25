@@ -58,8 +58,29 @@ export default function HomeScreen() {
     const id = Device.default.deviceId || Device.default.sessionId || 'unknown-device';
     setDeviceId(id);
     console.log('Device Agent: Device ID set to', id);
-    fetchRules(id);
+    registerDevice(id);
   }, []);
+
+  const registerDevice = async (id: string) => {
+    console.log('Device Agent: Registering device');
+    try {
+      await authenticatedPost('/api/devices/register', {
+        deviceId: id,
+        name: 'iOS Device',
+        platform: 'ios',
+      });
+      console.log('Device Agent: Device registered successfully');
+      fetchRules(id);
+    } catch (error: any) {
+      console.error('Device Agent: Error registering device', error);
+      if (error?.message?.includes('401') || error?.message?.includes('Authentication token not found')) {
+        showModal('Session Expired', 'Please sign in again to continue.');
+        router.replace('/auth');
+      } else {
+        fetchRules(id);
+      }
+    }
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;

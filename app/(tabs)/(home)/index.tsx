@@ -59,7 +59,7 @@ export default function HomeScreen() {
     const id = Device.default.deviceId || Device.default.sessionId || 'unknown-device';
     setDeviceId(id);
     console.log('Device Agent: Device ID set to', id);
-    fetchRules(id);
+    registerDevice(id);
   }, []);
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export default function HomeScreen() {
       console.log('Device Agent: Starting monitoring interval');
       interval = setInterval(() => {
         simulateUsageReport();
-      }, 60000); // Report every minute
+      }, 60000);
     }
     return () => {
       if (interval) {
@@ -77,6 +77,30 @@ export default function HomeScreen() {
       }
     };
   }, [isMonitoring, deviceId]);
+
+  const registerDevice = async (id: string) => {
+    console.log('Device Agent: Registering device');
+    try {
+      const platformName = Platform.OS as 'ios' | 'android' | 'web';
+      const deviceName = `${Platform.OS.charAt(0).toUpperCase() + Platform.OS.slice(1)} Device`;
+      
+      await authenticatedPost('/api/devices/register', {
+        deviceId: id,
+        name: deviceName,
+        platform: platformName,
+      });
+      console.log('Device Agent: Device registered successfully');
+      fetchRules(id);
+    } catch (error: any) {
+      console.error('Device Agent: Error registering device', error);
+      if (error?.message?.includes('401') || error?.message?.includes('Authentication token not found')) {
+        showModal('Session Expired', 'Please sign in again to continue.');
+        router.replace('/auth');
+      } else {
+        fetchRules(id);
+      }
+    }
+  };
 
   const fetchRules = async (id: string) => {
     console.log('Device Agent: Fetching rules for device', id);
@@ -211,7 +235,6 @@ export default function HomeScreen() {
 
   return (
     <>
-      {/* Web-compatible Modal (no Alert.alert) */}
       <Modal
         visible={modalVisible}
         transparent
@@ -256,7 +279,6 @@ export default function HomeScreen() {
           <RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={primaryColor} />
         }
       >
-        {/* Device Info Card */}
         <View style={[commonStyles.card, styles.card, { backgroundColor: cardColor, borderColor }]}>
           <View style={styles.cardHeader}>
             <IconSymbol
@@ -286,7 +308,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Monitoring Control */}
         <TouchableOpacity
           style={[
             styles.monitorButton,
@@ -305,7 +326,6 @@ export default function HomeScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* Stats Cards */}
         <View style={styles.statsRow}>
           <View style={[commonStyles.card, styles.statCard, { backgroundColor: cardColor, borderColor }]}>
             <Text style={[styles.statValue, { color: primaryColor }]}>
@@ -325,7 +345,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Active Rules */}
         <View style={styles.section}>
           <Text style={[commonStyles.subtitle, { color: textColor, marginBottom: 12 }]}>
             Active Rules
@@ -373,7 +392,6 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Usage Reports */}
         {usageData.length > 0 && (
           <View style={styles.section}>
             <Text style={[commonStyles.subtitle, { color: textColor, marginBottom: 12 }]}>
