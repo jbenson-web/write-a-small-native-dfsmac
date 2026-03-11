@@ -71,7 +71,7 @@ const getLogServerUrl = (): string | null => {
   return cachedLogServerUrl;
 };
 
-let logQueue: Array<{ level: string; message: string; source: string; timestamp: string; platform: string }> = [];
+let logQueue: { level: string; message: string; source: string; timestamp: string; platform: string }[] = [];
 let flushTimeout: ReturnType<typeof setTimeout> | null = null;
 let fetchErrorLogged = false;
 

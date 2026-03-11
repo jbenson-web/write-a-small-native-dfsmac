@@ -4,7 +4,7 @@ import { BACKEND_URL, getBearerToken } from './api';
 export type GamificationMessage =
   | { type: 'stats-update'; data: { currentStreak: number; totalPoints: number; perfectDays: number } }
   | { type: 'achievement-unlocked'; data: { achievementType: string; achievementName: string; metadata?: any } }
-  | { type: 'leaderboard-update'; data: Array<{ userId: string; userName: string; totalPoints: number; currentStreak: number }> }
+  | { type: 'leaderboard-update'; data: { userId: string; userName: string; totalPoints: number; currentStreak: number }[] }
   | { type: 'ping' }
   | { type: 'pong' }
   | { type: 'connected'; data: { userId: string } }
