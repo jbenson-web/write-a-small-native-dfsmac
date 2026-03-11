@@ -1,7 +1,8 @@
 import type { App } from '../index.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { eq, and, desc, gt, gte } from 'drizzle-orm';
+import { eq, and, desc, gt, gte, count, isNotNull } from 'drizzle-orm';
 import * as schema from '../db/schema/schema.js';
+import { broadcastToUser, broadcastToAll } from './ws-gamification.js';
 
 interface CheckInBody {
   deviceId: string;
@@ -493,6 +494,60 @@ export function registerGamificationRoutes(app: App) {
         'Check-in processed'
       );
 
+      // Broadcast check-in update to user's WebSocket connections
+      await broadcastToUser(userId, {
+        type: 'check-in',
+        data: {
+          pointsEarned,
+          newAchievements,
+          currentStreak,
+          totalPoints,
+        },
+      });
+
+      // Broadcast achievement unlocked events to user
+      for (const achievement of newAchievements) {
+        const achievementNames: Record<string, string> = {
+          'first_rule': 'Rule Follower',
+          'week_streak': 'Week Warrior',
+          'month_streak': 'Month Master',
+          'perfect_day': 'Perfect Record',
+          'rule_master': 'Rule Master',
+        };
+
+        await broadcastToUser(userId, {
+          type: 'achievement-unlocked',
+          data: {
+            achievementType: achievement,
+            achievementName: achievementNames[achievement],
+            metadata: { earnedAt: now.toISOString() },
+          },
+        });
+      }
+
+      // Fetch updated leaderboard and broadcast to all users
+      const topUsers = await app.db
+        .select({
+          userId: schema.userStats.userId,
+          totalPoints: schema.userStats.totalPoints,
+          currentStreak: schema.userStats.currentStreak,
+        })
+        .from(schema.userStats)
+        .orderBy(desc(schema.userStats.totalPoints))
+        .limit(10);
+
+      const leaderboard = topUsers.map((user, index) => ({
+        userId: user.userId,
+        userName: `User #${index + 1}`,
+        totalPoints: user.totalPoints,
+        currentStreak: user.currentStreak,
+      }));
+
+      await broadcastToAll({
+        type: 'leaderboard-update',
+        data: leaderboard,
+      });
+
       return {
         success: true,
         pointsEarned,
@@ -561,6 +616,136 @@ export function registerGamificationRoutes(app: App) {
       return leaderboard;
     } catch (error) {
       app.logger.error({ err: error }, 'Failed to fetch leaderboard');
+      throw error;
+    }
+  });
+
+  app.fastify.get('/api/gamification/live-stats', {
+    schema: {
+      description: 'Get comprehensive live statistics for authenticated user',
+      tags: ['gamification'],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            userStats: {
+              type: 'object',
+              properties: {
+                currentStreak: { type: 'integer' },
+                longestStreak: { type: 'integer' },
+                totalPoints: { type: 'integer' },
+                perfectDays: { type: 'integer' },
+                lastCheckIn: { type: ['string', 'null'], format: 'date-time' },
+              },
+            },
+            recentAchievements: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  achievementType: { type: 'string' },
+                  unlockedAt: { type: 'string', format: 'date-time' },
+                  metadata: { type: ['object', 'null'] },
+                },
+              },
+            },
+            leaderboardPosition: {
+              type: 'object',
+              properties: {
+                rank: { type: 'integer' },
+                userId: { type: 'string' },
+                totalPoints: { type: 'integer' },
+                currentStreak: { type: 'integer' },
+              },
+            },
+            activeUsersCount: { type: 'integer' },
+          },
+        },
+        401: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
+      },
+    },
+  }, async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<any | void> => {
+    const session = await requireAuth(request, reply);
+    if (!session) return;
+
+    const userId = session.user.id;
+
+    app.logger.info({ userId }, 'Fetching live stats');
+
+    try {
+      // Get user stats
+      const stats = await getOrCreateUserStats(userId);
+
+      // Get recent achievements (last 5)
+      const recentAchievements = await app.db
+        .select({
+          id: schema.achievements.id,
+          achievementType: schema.achievements.achievementType,
+          unlockedAt: schema.achievements.unlockedAt,
+          metadata: schema.achievements.metadata,
+        })
+        .from(schema.achievements)
+        .where(eq(schema.achievements.userId, userId))
+        .orderBy(desc(schema.achievements.unlockedAt))
+        .limit(5);
+
+      // Get leaderboard position
+      const allRanked = await app.db
+        .select({
+          userId: schema.userStats.userId,
+          totalPoints: schema.userStats.totalPoints,
+          currentStreak: schema.userStats.currentStreak,
+        })
+        .from(schema.userStats)
+        .orderBy(desc(schema.userStats.totalPoints));
+
+      let leaderboardPosition = null;
+      for (let i = 0; i < allRanked.length; i++) {
+        if (allRanked[i].userId === userId) {
+          leaderboardPosition = {
+            rank: i + 1,
+            userId: allRanked[i].userId,
+            totalPoints: allRanked[i].totalPoints,
+            currentStreak: allRanked[i].currentStreak,
+          };
+          break;
+        }
+      }
+
+      // Count active users (who have checked in at least once)
+      const activeUsersResult = await app.db
+        .select({ count: count() })
+        .from(schema.userStats)
+        .where(isNotNull(schema.userStats.lastCheckIn));
+
+      const activeUsersCount = activeUsersResult[0]?.count || 0;
+
+      const response = {
+        userStats: {
+          currentStreak: stats.currentStreak,
+          longestStreak: stats.longestStreak,
+          totalPoints: stats.totalPoints,
+          perfectDays: stats.perfectDays,
+          lastCheckIn: stats.lastCheckIn,
+        },
+        recentAchievements: recentAchievements as AchievementResponse[],
+        leaderboardPosition,
+        activeUsersCount: Number(activeUsersCount),
+      };
+
+      app.logger.info({ userId, rank: leaderboardPosition?.rank }, 'Live stats fetched');
+      return response;
+    } catch (error) {
+      app.logger.error({ err: error, userId }, 'Failed to fetch live stats');
       throw error;
     }
   });

@@ -895,4 +895,40 @@ describe("API Integration Tests", () => {
       expect(data.error).toBeDefined();
     });
   });
+
+  describe("Gamification - Live Stats", () => {
+    test("Get live stats (200)", async () => {
+      const res = await authenticatedApi(
+        "/api/gamification/live-stats",
+        authToken
+      );
+      await expectStatus(res, 200);
+      const data = await res.json();
+      expect(data.userStats).toBeDefined();
+      expect(typeof data.userStats.currentStreak).toBe("number");
+      expect(typeof data.userStats.longestStreak).toBe("number");
+      expect(typeof data.userStats.totalPoints).toBe("number");
+      expect(typeof data.userStats.perfectDays).toBe("number");
+      expect(Array.isArray(data.recentAchievements)).toBe(true);
+      expect(data.leaderboardPosition).toBeDefined();
+      expect(typeof data.leaderboardPosition.rank).toBe("number");
+      expect(typeof data.activeUsersCount).toBe("number");
+    });
+
+    test("Get live stats without authentication (401)", async () => {
+      const res = await api("/api/gamification/live-stats");
+      await expectStatus(res, 401);
+      const data = await res.json();
+      expect(data.error).toBeDefined();
+    });
+  });
+
+  describe("Gamification - WebSocket", () => {
+    test("Connect to WebSocket with authentication", async () => {
+      const ws = await connectAuthenticatedWebSocket("/ws/gamification", authToken);
+      expect(ws).toBeDefined();
+      expect(ws.readyState).toBe(1); // OPEN
+      ws.close();
+    });
+  });
 });
