@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -61,15 +61,7 @@ export default function DevicesScreen() {
     setModalVisible(true);
   };
 
-  useEffect(() => {
-    console.log('Devices Screen: Initializing');
-    const id = Device.default.deviceId || Device.default.sessionId || 'unknown-device';
-    setCurrentDeviceId(id);
-    console.log('Devices Screen: Current device ID', id);
-    registerCurrentDevice(id);
-  }, []);
-
-  const registerCurrentDevice = async (id: string) => {
+  const registerCurrentDevice = useCallback(async (id: string) => {
     console.log('Devices Screen: Registering current device');
     try {
       await authenticatedPost('/api/devices/register', {
@@ -86,9 +78,9 @@ export default function DevicesScreen() {
         router.replace('/auth');
       }
     }
-  };
+  }, [router]);
 
-  const fetchDevices = async () => {
+  const fetchDevices = useCallback(async () => {
     console.log('Devices Screen: Fetching devices');
     setLoading(true);
     try {
@@ -109,7 +101,7 @@ export default function DevicesScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
   const fetchDeviceStats = async (deviceId: string) => {
     try {
@@ -119,6 +111,14 @@ export default function DevicesScreen() {
       console.error('Devices Screen: Error fetching stats for device', deviceId, error);
     }
   };
+
+  useEffect(() => {
+    console.log('Devices Screen: Initializing');
+    const id = Device.default.deviceId || Device.default.sessionId || 'unknown-device';
+    setCurrentDeviceId(id);
+    console.log('Devices Screen: Current device ID', id);
+    registerCurrentDevice(id);
+  }, [registerCurrentDevice]);
 
   const handleEditDevice = (device: DeviceInfo) => {
     console.log('Devices Screen: User tapped edit for device', device.id);

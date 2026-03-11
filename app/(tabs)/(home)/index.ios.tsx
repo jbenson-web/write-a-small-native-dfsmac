@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -53,15 +53,7 @@ export default function HomeScreen() {
     setModalVisible(true);
   };
 
-  useEffect(() => {
-    console.log('Device Agent: Initializing device monitoring');
-    const id = Device.default.deviceId || Device.default.sessionId || 'unknown-device';
-    setDeviceId(id);
-    console.log('Device Agent: Device ID set to', id);
-    registerDevice(id);
-  }, []);
-
-  const registerDevice = async (id: string) => {
+  const registerDevice = useCallback(async (id: string) => {
     console.log('Device Agent: Registering device');
     try {
       await authenticatedPost('/api/devices/register', {
@@ -80,25 +72,9 @@ export default function HomeScreen() {
         fetchRules(id);
       }
     }
-  };
+  }, [router]);
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isMonitoring) {
-      console.log('Device Agent: Starting monitoring interval');
-      interval = setInterval(() => {
-        simulateUsageReport();
-      }, 60000); // Report every minute
-    }
-    return () => {
-      if (interval) {
-        console.log('Device Agent: Clearing monitoring interval');
-        clearInterval(interval);
-      }
-    };
-  }, [isMonitoring, deviceId]);
-
-  const fetchRules = async (id: string) => {
+  const fetchRules = useCallback(async (id: string) => {
     console.log('Device Agent: Fetching rules for device', id);
     setLoading(true);
     try {
@@ -118,9 +94,9 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
-  const enforceRules = (rulesToEnforce: DeviceRule[]) => {
+  const enforceRules = useCallback((rulesToEnforce: DeviceRule[]) => {
     console.log('Device Agent: Enforcing', rulesToEnforce.length, 'rules locally');
     rulesToEnforce.forEach(rule => {
       if (!rule.isActive) return;
@@ -134,9 +110,9 @@ export default function HomeScreen() {
         console.log('Device Agent: Time limit for', rule.targetApp, ':', minutes, 'minutes');
       }
     });
-  };
+  }, []);
 
-  const simulateUsageReport = async () => {
+  const simulateUsageReport = useCallback(async () => {
     console.log('Device Agent: Simulating usage report');
     const apps = ['Social Media', 'Browser', 'Email', 'Games', 'Productivity'];
     const randomApp = apps[Math.floor(Math.random() * apps.length)];
@@ -178,7 +154,31 @@ export default function HomeScreen() {
         router.replace('/auth');
       }
     }
-  };
+  }, [deviceId, router]);
+
+  useEffect(() => {
+    console.log('Device Agent: Initializing device monitoring');
+    const id = Device.default.deviceId || Device.default.sessionId || 'unknown-device';
+    setDeviceId(id);
+    console.log('Device Agent: Device ID set to', id);
+    registerDevice(id);
+  }, [registerDevice]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isMonitoring) {
+      console.log('Device Agent: Starting monitoring interval');
+      interval = setInterval(() => {
+        simulateUsageReport();
+      }, 60000); // Report every minute
+    }
+    return () => {
+      if (interval) {
+        console.log('Device Agent: Clearing monitoring interval');
+        clearInterval(interval);
+      }
+    };
+  }, [isMonitoring, deviceId, simulateUsageReport]);
 
   const toggleMonitoring = () => {
     const newState = !isMonitoring;

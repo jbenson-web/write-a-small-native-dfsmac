@@ -16,7 +16,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { authenticatedGet, authenticatedPost, authenticatedPut, authenticatedDelete } from '@/utils/api';
 import { IconSymbol } from '@/components/IconSymbol';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { colors, commonStyles } from '@/styles/commonStyles';
 
 interface DeviceRule {
@@ -289,7 +289,6 @@ export default function RulesScreen() {
   const [modalTitle, setModalTitle] = useState('');
   const [modalMessage, setModalMessage] = useState('');
 
-  // Form state
   const [formDeviceId, setFormDeviceId] = useState('');
   const [formRuleType, setFormRuleType] = useState<'screen_lock' | 'app_block' | 'time_limit'>('app_block');
   const [formTargetApp, setFormTargetApp] = useState('');
@@ -301,11 +300,6 @@ export default function RulesScreen() {
   const { user } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    console.log('RulesScreen: Component mounted, fetching rules and devices');
-    fetchRulesAndDevices();
-  }, []);
-
   const showModal = (title: string, message: string) => {
     console.log('RulesScreen: Showing modal:', title, message);
     setModalTitle(title);
@@ -313,7 +307,7 @@ export default function RulesScreen() {
     setModalVisible(true);
   };
 
-  const fetchRulesAndDevices = async () => {
+  const fetchRulesAndDevices = useCallback(async () => {
     console.log('RulesScreen: Fetching rules and devices');
     try {
       setLoading(true);
@@ -336,7 +330,12 @@ export default function RulesScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    console.log('RulesScreen: Component mounted, fetching rules and devices');
+    fetchRulesAndDevices();
+  }, [fetchRulesAndDevices]);
 
   const onRefresh = async () => {
     console.log('RulesScreen: User triggered refresh');
@@ -649,7 +648,6 @@ export default function RulesScreen() {
         )}
       </ScrollView>
 
-      {/* Add Rule Modal */}
       <Modal
         visible={showAddModal}
         transparent
@@ -797,7 +795,6 @@ export default function RulesScreen() {
         </View>
       </Modal>
 
-      {/* Edit Rule Modal */}
       <Modal
         visible={showEditModal}
         transparent
@@ -919,7 +916,6 @@ export default function RulesScreen() {
         </View>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
       <Modal
         visible={showDeleteModal}
         transparent
@@ -954,7 +950,6 @@ export default function RulesScreen() {
         </View>
       </Modal>
 
-      {/* Generic Modal */}
       <Modal
         visible={modalVisible}
         transparent
