@@ -5,6 +5,7 @@ import { registerDeviceAgentRoutes } from './routes/device-agent.js';
 import { registerDevicesRoutes } from './routes/devices.js';
 import { registerRulesRoutes } from './routes/rules.js';
 import { registerGamificationRoutes } from './routes/gamification.js';
+import { registerWebSocketGamification } from './routes/ws-gamification.js';
 
 const schema = { ...appSchema, ...authSchema };
 
@@ -23,6 +24,7 @@ registerDeviceAgentRoutes(app);
 registerDevicesRoutes(app);
 registerRulesRoutes(app);
 registerGamificationRoutes(app);
+registerWebSocketGamification(app);
 
 await app.run();
 app.logger.info('Application running');
