@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "write-a-small-native",
-    "slug": "write-a-small-native",
+    "name": "GetControl",
+    "slug": "getcontrol",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/Prototyping-Process-Blog-Chapter-2-Image-24.png",
@@ -36,7 +36,7 @@
       "expo-router",
       "expo-web-browser"
     ],
-    "scheme": "writeasmallnative",
+    "scheme": "getcontrol",
     "experiments": {
       "typedRoutes": true
     },
