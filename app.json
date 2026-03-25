@@ -4,11 +4,11 @@
     "slug": "write-a-small-native",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/app-icon-dsp.png",
+    "icon": "./assets/images/Prototyping-Process-Blog-Chapter-2-Image-24.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/app-icon-dsp.png",
+      "image": "./assets/images/Prototyping-Process-Blog-Chapter-2-Image-24.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
@@ -21,7 +21,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/app-icon-dsp.png",
+        "foregroundImage": "./assets/images/Prototyping-Process-Blog-Chapter-2-Image-24.png",
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
